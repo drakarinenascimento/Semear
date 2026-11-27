@@ -701,12 +701,25 @@ function calcularInfoCiclo() {
 
   const iniciosCiclo = [];
   let ultimaMenst = false;
+  // Renovação (nova fase): a planilha numera os ciclos a partir de um "ciclo base".
+  // O 1º início de ciclo do Registro traz esse número (ex.: "5º Ciclo"); a contagem continua dele.
+  let offsetCiclo = 0;
   sorted.forEach((r) => {
-    if (r.menstruada && !ultimaMenst) iniciosCiclo.push({ data: r.data });
+    if (r.menstruada && !ultimaMenst) {
+      if (!iniciosCiclo.length) {
+        const n = parseInt(String(r.ciclo || ''), 10);
+        if (n > 1) offsetCiclo = n - 1;
+      }
+      iniciosCiclo.push({ data: r.data });
+    }
     ultimaMenst = r.menstruada;
   });
 
-  if (!iniciosCiclo.length) return { dia: '—', ciclo: '1º Ciclo', nroCiclo: 1, inicio: null, duracaoEstimada: null };
+  if (!iniciosCiclo.length) {
+    const n = parseInt(String((sorted[0] && sorted[0].ciclo) || ''), 10);
+    const c = n > 0 ? n : 1;
+    return { dia: '—', ciclo: c + 'º Ciclo', nroCiclo: c, inicio: null, duracaoEstimada: null };
+  }
 
   // Usa a data selecionada no campo de lançamento (pode ser retroativa)
   const dataEl = document.getElementById('dataLancamento');
@@ -714,7 +727,7 @@ function calcularInfoCiclo() {
     ? new Date(dataEl.value + 'T00:00:00')
     : (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
   const inicioCicloAtual = new Date(iniciosCiclo[iniciosCiclo.length - 1].data + 'T00:00:00');
-  const nroCiclo   = iniciosCiclo.length;
+  const nroCiclo   = offsetCiclo + iniciosCiclo.length;
   const diaCiclo   = Math.max(1, Math.round((hoje - inicioCicloAtual) / 86400000) + 1);
   const sufixos    = ['º','º','º','º'];
   const cicloTexto = nroCiclo + (sufixos[nroCiclo - 1] || 'º') + ' Ciclo';
